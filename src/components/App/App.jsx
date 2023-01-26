@@ -12,7 +12,7 @@ const PERSONAL_KEY = '29444023-fe7d4e5e60b2e765be0bef471';
 
 export class App extends Component {
   state = {
-    imageArray: null,
+    imageArray: [],
     searchQuery: '',
     loading: false,
     showModal: false,
@@ -23,17 +23,33 @@ export class App extends Component {
   componentDidUpdate(prevProps, prevState) {
     const prevQuery = prevState.searchQuery;
     const nextQuery = this.state.searchQuery;
-    const { page } = this.state;
+    const { page, imageArray } = this.state;
     if (prevQuery !== nextQuery || prevState.page !== page) {
-      this.setState({ loading: true, imageArray: null });
+      this.setState({ loading: true });
       fetch(
         `https://pixabay.com/api/?q=${nextQuery}&page=${page}&key=${PERSONAL_KEY}&image_type=photo&orientation=horizontal&per_page=12`
       )
         .then(res => {
           return res.json();
         })
-        .then(imageArray => {
-          this.setState({ imageArray: imageArray.hits });
+        .then(Array => {
+          const photos = Array.hits.map(
+            ({ largeImageURL, webformatURL, id }) => {
+              return {
+                largeImageURL,
+                webformatURL,
+                id,
+              };
+            }
+          );
+          if (prevQuery !== nextQuery) {
+            this.setState({
+              page: 1,
+              imageArray: photos,
+            });
+          } else {
+            this.setState({ imageArray: [...imageArray, ...photos] });
+          }
         })
         .finally(() => {
           this.setState({ loading: false });
@@ -55,19 +71,19 @@ export class App extends Component {
   };
 
   handleSearchSubmit = searchQuery => {
-    // console.log(searchQuery);
     this.setState({ searchQuery, page: 1 });
   };
 
   render() {
     const { imageArray, loading, showModal, modalImg } = this.state;
+    console.log(imageArray.length > 11);
     return (
       <AppContainer>
         <Searchbar onSubmit={this.handleSearchSubmit} />
         {imageArray && (
           <ImageGallery imageArray={imageArray} onClick={this.toggleModal} />
         )}
-        {imageArray && <Button onLoadMore={this.loadMore} />}
+        {imageArray.length > 11 && <Button onLoadMore={this.loadMore} />}
         {loading && <Loader />}
         {showModal && (
           <Modal modalImgURL={modalImg} onClose={this.toggleModal} />
